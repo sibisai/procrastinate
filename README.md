@@ -16,13 +16,13 @@ procrastinate/
 │  │  ├─ db.py            # engine + SessionLocal
 │  │  └─ llm.py           # OpenAI SDK call + fallback
 │  ├─ requirements.txt
-│  ├─ .env.example
+│  ├─ .env
 │  └─ app.db              # SQLite (auto-created)
 └─ frontend/
    ├─ src/                # React app (Vite)
    ├─ index.html
    ├─ package.json
-   └─ .env.example
+   └─ .env
 ```
 
 ---
