@@ -38,6 +38,14 @@ def list_tasks(db: Session = Depends(get_db)):
     tasks = db.execute(select(models.Task)).scalars().all()
     return [to_task_out(db, t) for t in tasks]
 
+@app.patch("/tasks/{task_id}", response_model=schemas.TaskOut)
+def update_task(task_id: int, payload: schemas.TaskUpdate, db: Session = Depends(get_db)):
+    t = db.get(models.Task, task_id)
+    if not t: raise HTTPException(404, "Task not found")
+    t.status = payload.status
+    db.commit(); db.refresh(t)
+    return to_task_out(db, t)
+
 @app.post("/tasks/{task_id}/generate", response_model=schemas.MicroStepOut)
 async def generate_for_task(task_id: int, db: Session = Depends(get_db)):
     t = db.get(models.Task, task_id)
@@ -74,6 +82,7 @@ def to_task_out(db: Session, t: models.Task) -> schemas.TaskOut:
     return schemas.TaskOut(
         id=t.id,
         title=t.title,
+        status=t.status,
         created_at=t.created_at,
         latest_microstep=latest,
     )
