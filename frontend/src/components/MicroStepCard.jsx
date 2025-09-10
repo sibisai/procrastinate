@@ -18,8 +18,8 @@ if (ms.text.toLowerCase().includes("fallback")) {
   const isDone = ms.status === "done";
   const isSaving = updatingMicroId === ms.id;
 
-  const frame = `mt-2 p-3 rounded-xl border border-gray-200 ${
-    isDone ? "border-l-4 border-l-green-600" : "border-l-4 border-l-transparent"
+  const frame = `mt-2 p-3 rounded-xl border border-gray-200 border-l-4 ${
+  isDone ? "border-l-green-600" : "border-l-gray-200"
   }`;
 
   return (
