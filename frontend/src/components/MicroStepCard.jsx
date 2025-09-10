@@ -1,18 +1,19 @@
 export default function MicroStepCard({ taskId, ms, onGenerate, onUpdate, isGenerating, updatingMicroId }) {
   if (!ms) {
-    return (
-      <div className="mt-3">
-        <button
-          onClick={()=>onGenerate(taskId)}
-          disabled={isGenerating}
-          aria-busy={isGenerating}
-          className={`rounded-full px-3 py-1 text-xs ${isGenerating ? "bg-gray-300 cursor-not-allowed text-gray-700" : "bg-gray-200 text-gray-800"}`}
-        >
-          {isGenerating ? "Generating…" : "Generate first step"}
-        </button>
-      </div>
-    );
-  }
+  return (
+    <div className="mt-2 p-3 rounded-xl border border-gray-200">
+      <div className="text-sm text-gray-500">Generating first step…</div>
+    </div>
+  );
+}
+
+if (ms.text.toLowerCase().includes("fallback")) {
+  return (
+    <div className="mt-2 p-3 rounded-xl border border-yellow-300 bg-yellow-50">
+      <div className="text-sm text-yellow-800">⚠️ Using fallback step: {ms.text}</div>
+    </div>
+  );
+}
 
   const isDone = ms.status === "done";
   const isSaving = updatingMicroId === ms.id;

@@ -1,12 +1,12 @@
 import os, asyncio
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, BackgroundTasks, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func, desc
-from .db import Base, engine, get_db
+from .db import Base, engine, get_db, SessionLocal
 from . import models, schemas
 from .llm import generate_microstep
-import logging, sys
+import logging, sys, anyio
 
 logging.basicConfig(level=logging.INFO,
     handlers=[logging.StreamHandler(sys.stdout), logging.FileHandler("server.log")])
@@ -33,19 +33,37 @@ def to_task_out(db: Session, t: models.Task) -> schemas.TaskOut:
         .limit(1)
     ).scalars().first()
     return schemas.TaskOut(
-        id=t.id,
-        title=t.title,
-        status=t.status,            # required
-        created_at=t.created_at,
-        latest_microstep=latest,
+        id=t.id, title=t.title, status=t.status,
+        created_at=t.created_at, latest_microstep=latest
     )
 
+def _gen_and_store_microstep(task_id: int):
+    db = SessionLocal()
+    try:
+        t = db.get(models.Task, task_id)
+        if not t:
+            return
+        exists = db.execute(
+            select(models.MicroStep.id).where(models.MicroStep.task_id == task_id).limit(1)
+        ).scalar()
+        if exists:
+            return
+        try:
+            text = anyio.run(generate_microstep, t.title)
+        except Exception as e:
+            logging.exception(f"LLM failed for task {task_id}: {e}")
+            text = fallback(t.title)
+
+        db.add(models.MicroStep(task_id=task_id, text=text, status=models.Status.not_started))
+        db.commit()
+    finally:
+        db.close()
+
 @app.post("/tasks", response_model=schemas.TaskOut)
-def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db)):
+def create_task(payload: schemas.TaskCreate, background: BackgroundTasks, db: Session = Depends(get_db)):
     t = models.Task(title=payload.title.strip())
-    db.add(t)
-    db.commit()
-    db.refresh(t)
+    db.add(t); db.commit(); db.refresh(t)
+    background.add_task(_gen_and_store_microstep, t.id)
     return to_task_out(db, t)
 
 @app.get("/tasks", response_model=list[schemas.TaskOut])
@@ -83,7 +101,6 @@ def update_status(microstep_id: int, payload: schemas.StatusUpdate, db: Session 
     db.refresh(ms)
     return ms
 
-@app.get("/stats")
 @app.get("/stats")
 def stats(db: Session = Depends(get_db)):
     active = db.scalar(

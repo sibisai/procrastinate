@@ -7,7 +7,21 @@ import TaskList from "./components/TaskList";
 export default function App() {
   const qc = useQueryClient();
 
-  const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: getTasks });
+  // POLLING TASKS UNTIL latest_microstep EXISTS
+  const tasksQuery = useQuery({
+  queryKey: ["tasks"],
+  queryFn: getTasks,
+  staleTime: 500,
+  refetchOnWindowFocus: false,
+  refetchInterval: (data) => {
+    // data can be undefined or non-array until resolved
+    if (!Array.isArray(data)) return false;
+    return data.some(t => !t.latest_microstep) ? 1000 : false;
+  },
+  });
+
+  const tasks = tasksQuery.data ?? [];
+
   const { data: stats = { active_tasks: 0 } } =
   useQuery({ queryKey: ["stats"], queryFn: getStats });
 
@@ -16,18 +30,20 @@ export default function App() {
     qc.invalidateQueries({ queryKey:["stats"] });
   };
 
+  const burst = () => {
+    qc.invalidateQueries({ queryKey:["tasks"] });
+    setTimeout(() => qc.invalidateQueries({ queryKey:["tasks"] }), 1200);
+    setTimeout(() => qc.invalidateQueries({ queryKey:["tasks"] }), 3000);
+  };
+
   const addTaskMut = useMutation({
-    mutationFn: async (title) => {
-      const t = await createTask(title);
-      await generateMicro(t.id);
-      return t;
-    },
-    onSuccess: invalidate
+    mutationFn: (title) => createTask(title),
+    onSuccess: () => { burst(); },
   });
 
   const generateMut = useMutation({
     mutationFn: (taskId) => generateMicro(taskId),
-    onSuccess: () => qc.invalidateQueries({ queryKey:["tasks"] }),
+    onSuccess: () => { burst(); },
   });
 
   const updateTaskMut = useMutation({
@@ -52,10 +68,9 @@ export default function App() {
         onGenerate={(taskId) => generateMut.mutate(taskId)}
         onUpdate={(id,status) => updateStatusMut.mutate({ id, status })}
         onCompleteTask={(taskId) => updateTaskMut.mutate({ id: taskId, status: "done" })}
-        generatingId={generateMut.isPending ? generateMut.variables : null}
+        generatingTaskId={generateMut.isPending ? generateMut.variables : null}
         updatingMicroId={updateStatusMut.isPending ? updateStatusMut.variables?.id : null}
-        completingTaskId={updateTaskMut.isPending ? updateTaskMut.variables?.id : null}
-        />
+      />
 
     </div>
   );

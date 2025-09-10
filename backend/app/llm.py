@@ -25,7 +25,7 @@ def _bad(text: str) -> bool:
 def _call_openai_sync(task_title: str) -> str:
     client = OpenAI()  # reads OPENAI_API_KEY
     resp = client.responses.create(
-        model="gpt-5-nano",
+        model="gpt-5-mini",
         input=f"{INSTRUCTION}\nTask: {task_title}\nAnswer:",
         reasoning={"effort": "low"},
         text={"verbosity": "low"},
