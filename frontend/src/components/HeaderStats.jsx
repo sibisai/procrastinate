@@ -6,9 +6,7 @@ export default function HeaderStats({ stats }) {
     <header className="flex items-center justify-between">
       <h1 className="text-xl font-semibold">App Name</h1>
       <div className="flex gap-2">
-        <Pill label="Tasks" value={stats.tasks} />
-        <Pill label="Micro-steps" value={stats.microsteps} />
-        <Pill label="Done" value={stats.done_microsteps} />
+        <Pill label=" Active Tasks" value={stats.active_tasks} />
       </div>
     </header>
   );

@@ -8,8 +8,8 @@ export default function App() {
   const qc = useQueryClient();
 
   const { data: tasks = [] } = useQuery({ queryKey: ["tasks"], queryFn: getTasks });
-  const { data: stats = { tasks:0, microsteps:0, done_microsteps:0 } } =
-    useQuery({ queryKey: ["stats"], queryFn: getStats });
+  const { data: stats = { active_tasks: 0 } } =
+  useQuery({ queryKey: ["stats"], queryFn: getStats });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey:["tasks"] });

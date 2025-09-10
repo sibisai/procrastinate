@@ -25,6 +25,21 @@ app.add_middleware(
 def on_startup():
     Base.metadata.create_all(bind=engine)
 
+def to_task_out(db: Session, t: models.Task) -> schemas.TaskOut:
+    latest = db.execute(
+        select(models.MicroStep)
+        .where(models.MicroStep.task_id == t.id)
+        .order_by(desc(models.MicroStep.created_at))
+        .limit(1)
+    ).scalars().first()
+    return schemas.TaskOut(
+        id=t.id,
+        title=t.title,
+        status=t.status,            # required
+        created_at=t.created_at,
+        latest_microstep=latest,
+    )
+
 @app.post("/tasks", response_model=schemas.TaskOut)
 def create_task(payload: schemas.TaskCreate, db: Session = Depends(get_db)):
     t = models.Task(title=payload.title.strip())
@@ -69,20 +84,10 @@ def update_status(microstep_id: int, payload: schemas.StatusUpdate, db: Session 
     return ms
 
 @app.get("/stats")
+@app.get("/stats")
 def stats(db: Session = Depends(get_db)):
-    total_tasks = db.scalar(select(func.count(models.Task.id))) or 0
-    total_ms = db.scalar(select(func.count(models.MicroStep.id))) or 0
-    done_ms = db.scalar(select(func.count(models.MicroStep.id)).where(models.MicroStep.status == models.Status.done)) or 0
-    return {"tasks": total_tasks, "microsteps": total_ms, "done_microsteps": done_ms}
-
-def to_task_out(db: Session, t: models.Task) -> schemas.TaskOut:
-    latest = db.execute(
-        select(models.MicroStep).where(models.MicroStep.task_id == t.id).order_by(desc(models.MicroStep.created_at)).limit(1)
-    ).scalars().first()
-    return schemas.TaskOut(
-        id=t.id,
-        title=t.title,
-        status=t.status,
-        created_at=t.created_at,
-        latest_microstep=latest,
+    active = db.scalar(
+        select(func.count(models.Task.id))
+        .where(models.Task.status == models.TaskStatus.open)
     )
+    return {"active_tasks": active}
