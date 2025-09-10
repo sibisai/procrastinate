@@ -3,6 +3,7 @@ import { getTasks, getStats, createTask, generateMicro, updateMicroStatus, updat
 import HeaderStats from "./components/HeaderStats";
 import AddTask from "./components/AddTask";
 import TaskList from "./components/TaskList";
+import { Analytics } from "@vercel/analytics/react";
 
 export default function App() {
   const qc = useQueryClient();
@@ -71,7 +72,7 @@ export default function App() {
         generatingTaskId={generateMut.isPending ? generateMut.variables : null}
         updatingMicroId={updateStatusMut.isPending ? updateStatusMut.variables?.id : null}
       />
-
+      <Analytics />
     </div>
   );
 }
