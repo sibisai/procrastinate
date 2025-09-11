@@ -10,15 +10,19 @@ export default function App() {
 
   // POLLING TASKS UNTIL latest_microstep EXISTS
   const tasksQuery = useQuery({
-  queryKey: ["tasks"],
-  queryFn: getTasks,
-  staleTime: 500,
-  refetchOnWindowFocus: false,
-  refetchInterval: (data) => {
-    // data can be undefined or non-array until resolved
-    if (!Array.isArray(data)) return false;
-    return data.some(t => !t.latest_microstep) ? 1000 : false;
-  },
+    queryKey: ["tasks"],
+    queryFn: getTasks,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchIntervalInBackground: true,
+    // IMPORTANT: 'refetchInterval' gets the query observer, not data
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const waiting = Array.isArray(data) && data.some(t => !t.latest_microstep);
+      if (!waiting) return false;     // stop polling when all have a step
+      return 2000;                    // poll every 2s while waiting
+    },
   });
 
   const tasks = tasksQuery.data ?? [];
@@ -69,7 +73,7 @@ export default function App() {
         onGenerate={(taskId) => generateMut.mutate(taskId)}
         onUpdate={(id,status) => updateStatusMut.mutate({ id, status })}
         onCompleteTask={(taskId) => updateTaskMut.mutate({ id: taskId, status: "done" })}
-        generatingTaskId={generateMut.isPending ? generateMut.variables : null}
+        generatingTaskId={generateMut.isPending ? (generateMut.variables ?? null) : null}
         updatingMicroId={updateStatusMut.isPending ? updateStatusMut.variables?.id : null}
       />
       <Analytics />
